@@ -8,12 +8,9 @@
 # docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 -it --name elk <repo-user>/elk
 
 # replace with master-arm64 for ARM64
-ARG IMAGE=focal-1.1.0
+ARG IMAGE=noble-20241015
 
-FROM phusion/baseimage:${IMAGE}
-MAINTAINER Sebastien Pujadas http://pujadas.net
-ENV \
- REFRESHED_AT=2020-06-20
+FROM ubuntu:${IMAGE}
 
 
 ###############################################################################
@@ -22,13 +19,17 @@ ENV \
 
 ### install prerequisites (cURL, gosu, tzdata, JDK for Logstash)
 
-RUN set -x \
- && apt update -qq \
- && apt install -qqy --no-install-recommends ca-certificates curl gosu tzdata openjdk-11-jdk-headless \
- && apt clean \
- && rm -rf /var/lib/apt/lists/* \
- && gosu nobody true \
- && set +x
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends \
+      ca-certificates \
+      curl \
+      gosu \
+      openjdk-11-jdk-headless \
+      tzdata \
+ && apt-get upgrade --yes \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 
 ### set current package version
@@ -39,7 +40,7 @@ ARG ELK_VERSION=8.15.1
 ARG ELK_BASE_VERSION=8.15.1
 
 # replace with aarch64 for ARM64 systems
-ARG ARCH=x86_64 
+ARG ARCH=aarch64
 
 
 ### install Elasticsearch
@@ -56,8 +57,7 @@ ENV \
  ES_PATH_CONF=/etc/elasticsearch \
  ES_PATH_BACKUP=/var/backups
 
-RUN DEBIAN_FRONTEND=noninteractive \
- && mkdir ${ES_HOME} \
+RUN mkdir ${ES_HOME} \
  && curl -O https://artifacts.elastic.co/downloads/elasticsearch/${ES_PACKAGE} \
  && tar xzf ${ES_PACKAGE} -C ${ES_HOME} --strip-components=1 \
  && rm -f ${ES_PACKAGE} \
